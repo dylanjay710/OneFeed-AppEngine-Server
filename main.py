@@ -40,34 +40,42 @@ class MainHandler(webapp2.RequestHandler):
     def render(self, template, **kwargs):
         self.write(self.render_str(template, **kwargs))
 
-class HomePage(MainHandler):
-    def get(self, **params):
-        logging.info(params)
-        self.render("index.html")
+class CreateAccountHandler(MainHandler):
 
-class Header1(MainHandler):
     def get(self):
-        self.render("header1.html")
+        self.write("get request received")
 
-class Navbar1(MainHandler):
-    def get(self):
-        self.render("navbar1.html")
+    def post(self):
+        try:
+            username = self.request.get("username")
+            password = self.request.get("password")
+            confirm_password = self.request.get("confirm_password")
+            email = self.request.get("email")
+            confirm_email = self.request.get("confirm_email")
 
-class Body1(MainHandler):
-    def get(self):
-        self.render("body1.html")
+            if validAccountData(username, password, confirm_password, email, confirm_email):
+                self.write("storing user in db")
+            else:
+                self.write("bad data")
+        except Exception as e:
+            self.write("Exception Encountered while validating form: %s" % str(e))
 
-class Footer1(MainHandler):
-    def get(self):
-        self.render("footer1.html")
+def log(msg):
+    logging.info(msg)
 
+def validAccountData(username, password, confirm_password, email, confirm_email):
+    error = False
+    error_msg = ""
+    if len(username) >= 2:
+        if len(password) >=5:
+            if validEmail(email):
+                if passwords_match(password, confirm_password)
+                    if emails_match(email, confirm_email):
+                
 
+    return True
 
 app = webapp2.WSGIApplication([
-    ('/', HomePage),
-    ('/header1', Header1),
-    ('/navbar', Navbar1),
-    ('/body1', Body1),
-    ('/footer1', Footer1)
+    ('/create_account', CreateAccountHandler),
 
 ], debug=True)

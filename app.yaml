@@ -4,20 +4,6 @@ threadsafe: true
 
 
 handlers:
-- url: /css
-  static_dir: static/css
-
-- url: /js
-  static_dir: static/js
-
-- url: /img
-  static_dir: static/img
-
-- url: /fonts
-  static_dir: static/fonts
-
-- url: /angular
-  static_dir: static/js/angular-1.6.0
   
 - url: /.*
   script: main.app
