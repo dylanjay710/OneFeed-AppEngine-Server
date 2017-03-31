@@ -63,8 +63,8 @@ class OneFeedUser(ndb.Expando):
             password=password,
             email=email,
             social_network_feeds=social_networks)
-        user.put()
-        return user
+        k = user.put()
+        return (user, k)
 
     @classmethod
     def get_all_entities(cls):
@@ -133,7 +133,8 @@ class CreateAccountHandler(MainHandler):
                     log("%s exists, displaying error msg" % username)
                     self.write("username exists %s" % username)
                 else:
-                    new_user = OneFeedUser.store_user(username, password, email, [])
+                    new_user, key = OneFeedUser.store_user(username, password, email, [])
+                    log(key)
                     log("user stored with properties")
                     log(new_user._properties)
                     self.write("ok working bitch")
