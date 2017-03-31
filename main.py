@@ -40,10 +40,86 @@ class MainHandler(webapp2.RequestHandler):
     def render(self, template, **kwargs):
         self.write(self.render_str(template, **kwargs))
 
+class User(ndb.Model):
+    # uid = ndb.StringProperty(required
+    pass
+
+class OneFeedUser(ndb.Expando):
+
+    userid = ndb.StringProperty(required=True)
+    username = ndb.StringProperty(required=True)
+    password = ndb.StringProperty(required=True)
+    email = ndb.StringProperty(required=True)
+    social_network_feeds = ndb.StringProperty(repeated=True)
+
+    @classmethod
+    def store_user(cls, username, password, email, social_networks):
+        key = cls.create_user_key()
+        user = cls(
+            key_name=key,
+            userid=key,
+            username=username,
+            password=password,
+            email=email,
+            social_network_feeds=social_networks)
+        user.put()
+        return user
+
+    @classmethod
+    def get_all_entities(cls):
+        return cls.query()
+
+    @classmethod
+    def userid_exists(cls, user_id_key):
+        user = cls.get_by_id(user_id_key)
+        return user != None
+
+    @classmethod
+    def username_exists(cls, username):
+        user = cls.query(cls.username == username)
+        return user != None
+
+    @classmethod
+    def create_user_key(cls):
+        user_id_key = cls.create_random_key()
+        while (cls.userid_exists(user_id_key)):
+            user_id_key = cls.create_random_key()
+        return user_id_key
+
+    @classmethod
+    def random_letter(cls, string):
+        return string[random.randint(0, len(string)-1)]
+
+    @classmethod
+    def create_random_key(cls):
+        random_letters = string.lowercase + string.digits + string.uppercase + string.digits
+        user_id_args = [ cls.random_letter(random_letters) for i in range(15) ]
+        return "".join(user_id_args)
+
+    @classmethod
+    def log_users_on_server(cls):
+        each(cls.query(), log)
+
+    @classmethod
+    def delete_all(cls):
+        pass
+
+class DBHandler(MainHandler):
+    def get(self):
+        action = self.request.get("action")
+        if action == "log_users_on_server":
+            OneFeedUser.log_users_on_server()
+        elif action == "delete_all":
+            OneFeedUser.delete_all();
+        
 class CreateAccountHandler(MainHandler):
+    
+    def test_functions(self):
+        pass
 
     def get(self):
-        self.write("get request received")
+        self.test_functions()
+        self.write("<script src='https://ajax.googleapis.com/ajax/libs/jquery/3.2.1/jquery.min.js'></script>")
 
     def post(self):
         try:
@@ -52,55 +128,31 @@ class CreateAccountHandler(MainHandler):
             confirm_password = self.request.get("confirm_password")
             email = self.request.get("email")
             confirm_email = self.request.get("confirm_email")
-            data = [username, password, confirm_password, email, confirm_email]
-            
-            log_args(data)
 
-            # account_check_response = analyze_form(username, password, confirm_password, email, confirm_email):
-            # if account_check_response[0] == True:
-            #     self.write("user with username %s" % username + " stored successfully")
-            #     log("user stored sanity check")
-
-            # elif account_check_response[0] == False:
-            #     self.write("Form Error: %s" % account_check_response[1])
+            if validForm(username, password, confirm_password, email, confirm_email)[0] == True:
+                if OneFeedUser.username_exists(username):
+                    log("%s exists, displaying error msg" % username)
+                    self.write("username exists %s" % username)
+                else:
+                    new_user = OneFeedUser.store_user(username, password, email, [])
+                    log("user stored with properties")
+                    log(new_user._properties)
+                    self.write("ok working bitch")
 
         except Exception as e:
-            self.write("Exception Encountered while validating form: %s" % str(e))
+            self.write("Exception ENcountered %s" % str(e))
 
-# def analyze_form(username, password, confirm_password, email, confirm_email):
-#     error_msg = None
-#     if len(username) >= 2:
-#         if len(password) >=5:
-#             if validEmail(email):
-#                 if passwords_match(password, confirm_password)
-#                     if emails_match(email, confirm_email):
-#                         // add exists method here
-#                         try:
-#                             OneFeedUser.store_user(username, password, confirm_password, email, confirm_email)
-#                             return (True, error_msg)
+def validForm(username, password, confirm_password, email, confirm_email):
+    return (True, None)
 
-#                         except  Exception as e:
-#                             log("Exception Encountered: %s" % str(e))
-#                     else:
-#                         error_msg = "emails do not match"
-#                 else:
-#                     error_msg = "passwords do not match"
-#             else:
-#                 error_msg = "invalid email"
-#         else:
-#             error_msg = "password must be at least 5 characters long"
-#     else:
-#         error_msg = "username must be at least 2 characters long"
-
-#     return (False, error_msg)
-
-def emails_match(email, confirm_email):
-    return validEmail(email) and validEmail(confirm_email) and email == confirm_email
+# def emails_match(email, confirm_email):
+#     return validEmail(email) and validEmail(confirm_email) and email == confirm_email:
 
 def validEmail(email):
     match = re.match('^[_a-z0-9-]+(\.[_a-z0-9-]+)*@[a-z0-9-]+(\.[a-z0-9-]+)*(\.[a-z]{2,4})$', email)
     if match != None:
         return True
+    return False
 
 def log(msg):
     logging.info(msg)
@@ -108,6 +160,10 @@ def log(msg):
 def log_args(args):
     for arg in args:
         log(arg)
+
+def each(args, f):
+    for arg in args:
+        f(arg)
 
 app = webapp2.WSGIApplication([
     ('/create_account', CreateAccountHandler),
