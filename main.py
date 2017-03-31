@@ -71,12 +71,14 @@ class OneFeedUser(ndb.Expando):
 
     @classmethod
     def userid_exists(cls, user_id_key):
-        user = cls.get_by_id(user_id_key)
+        user = cls.get_by_id(user_id_key).fetch()
         return user != None
 
     @classmethod
     def username_exists(cls, username):
-        user = cls.query(cls.username == username)
+        user = cls.query(cls.username == username).fetch()
+        log("check username exists")
+        log(user)
         return user != None
 
     @classmethod
@@ -94,10 +96,13 @@ class OneFeedUser(ndb.Expando):
     def create_random_key(cls):
         random_letters = string.lowercase + string.digits + string.uppercase + string.digits
         user_id_args = [ cls.random_letter(random_letters) for i in range(15) ]
+        random_key = "".join(user_id_args)
+        log("printin")
         return "".join(user_id_args)
 
     @classmethod
     def log_users_on_server(cls):
+        log("printing users")
         each(cls.query(), log)
 
     @classmethod
@@ -111,14 +116,24 @@ class DBHandler(MainHandler):
             OneFeedUser.log_users_on_server()
         elif action == "delete_all":
             OneFeedUser.delete_all();
-        
+        elif action == "get_users":
+            users = OneFeedUser.get_users()
+            log(users)
+
+    def post(self):
+        action = self.request.get("action")
+        if action == "log_users_on_server":
+            OneFeedUser.log_users_on_server()
+        elif action == "delete_all":
+            OneFeedUser.delete_all();
+        elif action == "get_users":
+            users = OneFeedUser.get_all_entities()
+            log(users)
+
+   
 class CreateAccountHandler(MainHandler):
-    
-    def test_functions(self):
-        pass
 
     def get(self):
-        self.test_functions()
         self.write("<script src='https://ajax.googleapis.com/ajax/libs/jquery/3.2.1/jquery.min.js'></script>")
 
     def post(self):
@@ -167,5 +182,6 @@ def each(args, f):
 
 app = webapp2.WSGIApplication([
     ('/create_account', CreateAccountHandler),
+    ('/db_handler', DBHandler)
 
 ], debug=True)
