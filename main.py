@@ -102,7 +102,7 @@ class OneFeedUser(ndb.Expando):
 
     @classmethod
     def delete_all(cls):
-        pass
+        log("deleting all users")
 
 class DBHandler(MainHandler):
     def get(self):
