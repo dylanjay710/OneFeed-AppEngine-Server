@@ -24,6 +24,7 @@ import logging
 import random
 from google.appengine.ext import ndb
 import sys
+import dj_test_handler
 
 template_dir = os.path.join(os.path.dirname(__file__), 'jinja_templates')
 jinja_env = jinja2.Environment(loader = jinja2.FileSystemLoader(template_dir), autoescape = True)
@@ -46,10 +47,10 @@ class User(ndb.Model):
 
 class OneFeedUser(ndb.Expando):
 
-    userid = ndb.StringProperty(required=True)
-    username = ndb.StringProperty(required=True)
-    password = ndb.StringProperty(required=True)
-    email = ndb.StringProperty(required=True)
+    userid = ndb.StringProperty()
+    username = ndb.StringProperty()
+    password = ndb.StringProperty()
+    email = ndb.StringProperty()
     social_network_feeds = ndb.StringProperty(repeated=True)
 
     @classmethod
@@ -67,19 +68,17 @@ class OneFeedUser(ndb.Expando):
 
     @classmethod
     def get_all_entities(cls):
-        return cls.query()
+        return cls.query().fetch()
 
     @classmethod
     def userid_exists(cls, user_id_key):
-        user = cls.get_by_id(user_id_key).fetch()
+        user = cls.get_by_id(user_id_key)
         return user != None
 
     @classmethod
     def username_exists(cls, username):
-        user = cls.query(cls.username == username).fetch()
-        log("check username exists")
-        log(user)
-        return user != None
+        user = cls.query(cls.username == username)
+        return user.get() != None
 
     @classmethod
     def create_user_key(cls):
@@ -97,38 +96,23 @@ class OneFeedUser(ndb.Expando):
         random_letters = string.lowercase + string.digits + string.uppercase + string.digits
         user_id_args = [ cls.random_letter(random_letters) for i in range(15) ]
         random_key = "".join(user_id_args)
-        log("printin")
-        return "".join(user_id_args)
+        return random_key
 
     @classmethod
     def log_users_on_server(cls):
-        log("printing users")
         each(cls.query(), log)
 
     @classmethod
     def delete_all(cls):
-        log("deleting all users")
+        pass
 
 class DBHandler(MainHandler):
     def get(self):
-        action = self.request.get("action")
-        if action == "log_users_on_server":
-            OneFeedUser.log_users_on_server()
-        elif action == "delete_all":
-            OneFeedUser.delete_all();
-        elif action == "get_users":
-            users = OneFeedUser.get_users()
-            log(users)
+        test_handler = dj_test_handler.TestHandler(OneFeedUser)
+        test_handler.test_db()
 
     def post(self):
-        action = self.request.get("action")
-        if action == "log_users_on_server":
-            OneFeedUser.log_users_on_server()
-        elif action == "delete_all":
-            OneFeedUser.delete_all();
-        elif action == "get_users":
-            users = OneFeedUser.get_all_entities()
-            log(users)
+        pass
 
    
 class CreateAccountHandler(MainHandler):
