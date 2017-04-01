@@ -55,9 +55,9 @@ class OneFeedUser(ndb.Expando):
 
     @classmethod
     def store_user(cls, username, password, email, social_networks):
-        key = cls.create_user_key()
+        key = "key:" + cls.create_user_key()
         user = cls(
-            key_name=key,
+            key_name="key",
             userid=key,
             username=username,
             password=password,
@@ -70,7 +70,6 @@ class OneFeedUser(ndb.Expando):
     def check_login_credentials(cls, username, password):
         user = cls.query(cls.username == username and cls.password == password)
         u = user.get()
-        log(u)
         return u != None
 
     @classmethod
@@ -159,7 +158,7 @@ class LoginHandler(MainHandler):
 
         credentialsValid = OneFeedUser.check_login_credentials(username, password)
 
-        if credentialsValid != None:
+        if credentialsValid:
             self.write("login,true")
         else:
             self.write("login,false")
@@ -189,6 +188,7 @@ def each(args, f):
 
 app = webapp2.WSGIApplication([
     ('/create_account', CreateAccountHandler),
-    ('/db_handler', DBHandler)
+    ('/db_handler', DBHandler),
+    ('/login', LoginHandler)
 
 ], debug=True)
