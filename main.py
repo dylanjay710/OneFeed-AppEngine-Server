@@ -67,6 +67,13 @@ class OneFeedUser(ndb.Expando):
         return (user, k)
 
     @classmethod
+    def check_login_credentials(cls, username, password):
+        user = cls.query(cls.username == username and cls.password == password)
+        u = user.get()
+        log(u)
+        return u != None
+
+    @classmethod
     def get_all_entities(cls):
         return cls.query().fetch()
 
@@ -141,6 +148,21 @@ class CreateAccountHandler(MainHandler):
 
         except Exception as e:
             self.write("Exception ENcountered %s" % str(e))
+
+class LoginHandler(MainHandler):
+    def get(self):
+        pass
+
+    def post(self):
+        username = self.request.get("username")
+        password = self.request.get("password")
+
+        credentialsValid = OneFeedUser.check_login_credentials(username, password)
+
+        if credentialsValid != None:
+            self.write("login,true")
+        else:
+            self.write("login,false")
 
 def validForm(username, password, confirm_password, email, confirm_email):
     return (True, None)

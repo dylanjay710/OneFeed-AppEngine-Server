@@ -26,10 +26,11 @@ class TestHandler(object):
 		new_user_key = self.db_handler.create_user_key()
 		logging.info("created user key: %s" % new_user_key)
 
-		logging.info("testing random letter function with string 'hello'")
-		logging.info("random letter: %s" % self.db_handler.random_letter("hello"))
-
 		logging.info("testing random key function")
 		random_key = self.db_handler.create_random_key()
 		logging.info("random key: %s" % random_key)
+
+		logging.info("checking login credentials with login username password")
+		user_login_correct = self.db_handler.check_login_credentials("username", "password")
+		logging.info("user login valid: %s" % user_login_correct)
 
