@@ -54,7 +54,7 @@ class GoogleUser(ndb.Expando):
     date = ndb.DateTimeProperty(auto_now_add=True)
 
     @classmethod
-    def store_google_user(cls, em, dn, gn, fn, gid):
+    def store_user(cls, em, dn, gn, fn, gid):
         user_key = "key:" + gid
         new_google_user = GoogleUser(
             key_name=user_key,
@@ -154,7 +154,7 @@ class DBTester(MainHandler):
 class CustomLoginHandler(MainHandler):
 
     def get(self):
-        self.write("<script src='https://ajax.googleapis.com/ajax/libs/jquery/3.2.1/jquery.min.js'></script>")
+        pass
 
     def post(self):
         try:
@@ -168,6 +168,7 @@ class CustomLoginHandler(MainHandler):
                 confirm_password = self.request.get("confirm_password")
                 email = self.request.get("email")
                 confirm_email = self.request.get("confirm_email")
+
 
                 if validForm(username, password, confirm_password, email, confirm_email)[0] == True:
                     if OneFeedUser.username_exists(username):
@@ -203,19 +204,23 @@ class GoogleLoginHandler(MainHandler):
 
     def post(self):
 
-        google_id = self.request.get("google_id")
-        display_name = self.request.get("display_name")
-        email = self.request.get("email")
-        family_name = self.request.get("family_name")
-        given_name = self.request.get("given_name")
+        try:
+            google_id = self.request.get("google_id")
+            display_name = self.request.get("display_name")
+            email = self.request.get("email")
+            family_name = self.request.get("family_name")
+            given_name = self.request.get("given_name")
 
-        # Respond with a boolean indicating whether or not this is the users first time signing in, true if so
-        if GoogleUser.user_exists(google_id):
-            return self.write("true") 
-        else:
-            user, key = GoogleUser.store_user(email, display_name, given_name, family_name, google_id)
-            return self.write("false")
-        
+            # Respond with a boolean indicating whether or not this is the users first time signing in, true if so
+            if GoogleUser.user_exists(google_id):
+                self.write("true") 
+            else:
+                user, key = GoogleUser.store_user(email, display_name, given_name, family_name, google_id)
+                self.write("false")
+            
+        except Exception as e:
+            log(str(e))
+            self.write("error")
 
 class FacebookLoginHandler(MainHandler):
     def get(self):
