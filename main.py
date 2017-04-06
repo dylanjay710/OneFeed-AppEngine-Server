@@ -141,11 +141,11 @@ class CustomUser(ndb.Expando):
         log("deleting all Custom Users")
 
 
-class DBHandler(MainHandler):
+class DBTester(MainHandler):
 
     def get(self):
-        google_db_tester = dj_test_handler.TestHandler(GoogleUser, FacebookUser)
-        test_handler.test_db()
+        db_tester = dj_test_handler.TestHandler(GoogleUser, FacebookUser)
+        db_tester.test_db()
 
     def post(self):
         pass
@@ -259,7 +259,7 @@ app = webapp2.WSGIApplication([
 
     ('/', HomePage),
     ('/handle_custom_login', CustomLoginHandler),
-    ('/db_handler', DBHandler),
+    ('/test_db', DBTester),
     ('/handle_google_login', GoogleLoginHandler),
     ('/handle_facebook_login', FacebookLoginHandler),
 

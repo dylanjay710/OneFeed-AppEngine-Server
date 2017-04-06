@@ -13,7 +13,7 @@ class TestHandler(object):
 	def show_google_users(self):
 
 		logging.info("getting google users from db")
-		google_users = self.google_userdb.all()
+		google_users = self.google_userdb.query().fetch()
 		logging.info("[+] Number of google users in OneFeed datastore: " + str(len(google_users)))
 	
 		for user in google_users:
@@ -27,7 +27,7 @@ class TestHandler(object):
 	def show_facebook_users(self):
 		
 		logging.info("getting facebook users from db")
-		facebook_users = self.facebook_userdb.all()
+		facebook_users = self.facebook_userdb.query().fetch()
 		logging.info("[+] Number of facebook users in OneFeed datastore: " + str(len(facebook_users)))
 	
 		for user in facebook_users:
