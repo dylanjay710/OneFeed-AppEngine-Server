@@ -41,17 +41,45 @@ class MainHandler(webapp2.RequestHandler):
     def render(self, template, **kwargs):
         self.write(self.render_str(template, **kwargs))
 
-class User(ndb.Model):
-    # uid = ndb.StringProperty(required
+class FacebookUser(ndb.Expando):
     pass
 
-class OneFeedUser(ndb.Expando):
+class GoogleUser(ndb.Expando):
 
-    userid = ndb.StringProperty()
+    email = ndb.StringProperty()
+    display_name = ndb.StringProperty()
+    given_name = ndb.StringProperty()
+    family_name = ndb.StringProperty()
+    social_networks = ndb.StringProperty(repeated=True)
+    date = ndb.DateTimeProperty(auto_now_add=True)
+
+    @classmethod
+    def store_google_user(cls, em, dn, gn, fn, gid):
+        user_key = "key:" + gid
+        new_google_user = GoogleUser(
+            key_name=user_key,
+            email=em, 
+            display_name=dn,
+            given_name=gn,
+            family_name=fn,
+            social_networks=[]
+        )
+        key = new_google_user.put()
+        log("[+] New Google User stored")
+        log(key)
+        return new_google_user, key
+
+    @classmethod
+    def user_exists(cls, gid):
+        return cls.get_by_id(gid) != None
+
+class CustomUser(ndb.Expando):
+
     username = ndb.StringProperty()
     password = ndb.StringProperty()
     email = ndb.StringProperty()
     social_network_feeds = ndb.StringProperty(repeated=True)
+    date = ndb.DateTimeProperty(auto_now_add=True)
 
     @classmethod
     def store_user(cls, username, password, email, social_networks):
@@ -88,10 +116,10 @@ class OneFeedUser(ndb.Expando):
 
     @classmethod
     def create_user_key(cls):
-        user_id_key = cls.create_random_key()
-        while (cls.userid_exists(user_id_key)):
-            user_id_key = cls.create_random_key()
-        return user_id_key
+        user_key = cls.create_random_key()
+        while (cls.userid_exists(user_key)):
+            user_key = cls.create_random_key()
+        return user_key
 
     @classmethod
     def random_letter(cls, string):
@@ -102,7 +130,7 @@ class OneFeedUser(ndb.Expando):
         random_letters = string.lowercase + string.digits + string.uppercase + string.digits
         user_id_args = [ cls.random_letter(random_letters) for i in range(15) ]
         random_key = "".join(user_id_args)
-        return random_key
+        return "key:%s" % random_key
 
     @classmethod
     def log_users_on_server(cls):
@@ -110,59 +138,100 @@ class OneFeedUser(ndb.Expando):
 
     @classmethod
     def delete_all(cls):
-        log("fuck you")
+        log("deleting all Custom Users")
+
 
 class DBHandler(MainHandler):
+
     def get(self):
-        test_handler = dj_test_handler.TestHandler(OneFeedUser)
+        google_db_tester = dj_test_handler.TestHandler(GoogleUser, FacebookUser)
         test_handler.test_db()
 
     def post(self):
         pass
 
    
-class CreateAccountHandler(MainHandler):
+class CustomLoginHandler(MainHandler):
 
     def get(self):
         self.write("<script src='https://ajax.googleapis.com/ajax/libs/jquery/3.2.1/jquery.min.js'></script>")
 
     def post(self):
         try:
-            username = self.request.get("username")
-            password = self.request.get("password")
-            confirm_password = self.request.get("confirm_password")
-            email = self.request.get("email")
-            confirm_email = self.request.get("confirm_email")
 
-            if validForm(username, password, confirm_password, email, confirm_email)[0] == True:
-                if OneFeedUser.username_exists(username):
-                    log("%s exists, displaying error msg" % username)
-                    self.write("username exists %s" % username)
+            submit_way = self.request.get("login_type")
+
+            if submit_way == "signup":
+
+                username = self.request.get("username")
+                password = self.request.get("password")
+                confirm_password = self.request.get("confirm_password")
+                email = self.request.get("email")
+                confirm_email = self.request.get("confirm_email")
+
+                if validForm(username, password, confirm_password, email, confirm_email)[0] == True:
+                    if OneFeedUser.username_exists(username):
+
+                        log("[+] %s exists" % username)
+                        self.write("username_exists,true")
+
+                    else:
+
+                        new_user, key = OneFeedUser.store_user(username, password, email, [])
+                        log("[+] New user stored using custom login ")
+                        self.write("username_exists,false")
+
+            elif submit_way == "login":
+
+                username = self.request.get("username")
+                password = self.request.get("password")
+
+                credentialsValid = OneFeedUser.check_login_credentials(username, password)
+
+                if credentialsValid:
+                    self.write("login,true")
                 else:
-                    new_user, key = OneFeedUser.store_user(username, password, email, [])
-                    log(key)
-                    log("user stored with properties")
-                    log(new_user._properties)
-                    self.write("ok working bitch")
+                    self.write("login,false")
 
         except Exception as e:
             self.write("Exception ENcountered %s" % str(e))
 
-class LoginHandler(MainHandler):
+ 
+class GoogleLoginHandler(MainHandler):
     def get(self):
         pass
 
     def post(self):
-        username = self.request.get("username")
-        password = self.request.get("password")
 
-        credentialsValid = OneFeedUser.check_login_credentials(username, password)
+        google_id = self.request.get("google_id")
+        display_name = self.request.get("display_name")
+        email = self.request.get("email")
+        family_name = self.request.get("family_name")
+        given_name = self.request.get("given_name")
 
-        if credentialsValid:
-            self.write("login,true")
+        # Respond with a boolean indicating whether or not this is the users first time signing in, true if so
+        if GoogleUser.user_exists(google_id):
+            return self.write("true") 
         else:
-            self.write("login,false")
+            user, key = GoogleUser.store_user(email, display_name, given_name, family_name, google_id)
+            return self.write("false")
+        
 
+class FacebookLoginHandler(MainHandler):
+    def get(self):
+        pass
+
+    def post(self):
+        pass
+
+class HomePage(MainHandler):
+
+    def get(self):
+        self.render("index.html")
+
+    def post(self):
+        pass
+        
 def validForm(username, password, confirm_password, email, confirm_email):
     return (True, None)
 
@@ -187,8 +256,12 @@ def each(args, f):
         f(arg)
 
 app = webapp2.WSGIApplication([
-    ('/create_account', CreateAccountHandler),
+
+    ('/', HomePage),
+    ('/handle_custom_login', CustomLoginHandler),
     ('/db_handler', DBHandler),
-    ('/login', LoginHandler)
+    ('/handle_google_login', GoogleLoginHandler),
+    ('/handle_facebook_login', FacebookLoginHandler),
+
 
 ], debug=True)

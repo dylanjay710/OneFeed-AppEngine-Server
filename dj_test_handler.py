@@ -1,19 +1,37 @@
 import logging
 class TestHandler(object):
 
-	def __init__(self, db_handler):
-		self.db_handler = db_handler
+	def __init__(self, google_user_db, facebook_user_db):
+		self.google_userdb = google_user_db
+		self.facebook_userdb = facebook_user_db
 
 	def test_db(self):
 
-		logging.info("getting all users from db")
-		users = self.db_handler.get_all_entities()
-		logging.info("number of onefeed users in datastore: " + str(len(users)))
-		logging.info("Iterating over users in google cloud. Passwords will be hashed soon lol. Don't ask")
-		for user in users:
-			logging.info(user.username)
-			logging.info(user)
-			logging.info(user.userid)
+		self.show_google_users()
+		self.show_facebook_users()
+
+	def show_google_users(self):
+
+		logging.info("getting google users from db")
+		google_users = self.google_userdb.all()
+		logging.info("[+] Number of google users in OneFeed datastore: " + str(len(google_users)))
+	
+		for user in google_users:
+			logging.info(user.key_name)
+			logging.info(user.display_name)
+			logging.info(user.family_name)
+			logging.info(user.display_name)
 			logging.info(user.email)
-			logging.info(user.social_network_feeds)
+			logging.info(user.social_networks)
+
+	def show_facebook_users(self):
+		
+		logging.info("getting facebook users from db")
+		facebook_users = self.facebook_userdb.all()
+		logging.info("[+] Number of facebook users in OneFeed datastore: " + str(len(facebook_users)))
+	
+		for user in facebook_users:
+			log(user)
+
+
 
