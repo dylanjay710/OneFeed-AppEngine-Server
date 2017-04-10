@@ -12,6 +12,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+
+
+""" Welcome everyone! This is the google app engine backend for an android app that connects and organizes social networks """
 import webapp2
 import os
 import jinja2
@@ -29,6 +32,7 @@ import dj_test_handler
 template_dir = os.path.join(os.path.dirname(__file__), 'jinja_templates')
 jinja_env = jinja2.Environment(loader = jinja2.FileSystemLoader(template_dir), autoescape = True)
 
+""" Still using Steve Huffmans Mainhandler class """
 class MainHandler(webapp2.RequestHandler):
 
     def write(self, *args, **kwargs):
@@ -41,11 +45,32 @@ class MainHandler(webapp2.RequestHandler):
     def render(self, template, **kwargs):
         self.write(self.render_str(template, **kwargs))
 
+""" Google Cloud Datastore """
 class FacebookUser(ndb.Expando):
-    pass
+    
+    id = ndb.StringProperty()
+    date_created = ndb.DateTimeProperty()
+    social_networks = ndb.StringProperty(repeated=True)
+
+    @classmethod 
+    def user_exists(cls, fid):
+        log("checking if facebook user %s exists" % fid)
+        user = cls.get_by_id(fid) # accesses the userid
+        log((user != None))
+        return user != None
+
+    @classmethod
+    def store_user(cls, fid):
+        new_facebook_user = FacebookUser(id=fid, social_networks=[])
+        key = new_user.put()
+        log("[+] New facebook User stored")
+        log(key)
+        log(fid)
+        return new_facebook_user, key
 
 class GoogleUser(ndb.Expando):
 
+    id = ndb.StringProperty()
     email = ndb.StringProperty()
     display_name = ndb.StringProperty()
     given_name = ndb.StringProperty()
@@ -55,9 +80,9 @@ class GoogleUser(ndb.Expando):
 
     @classmethod
     def store_user(cls, em, dn, gn, fn, gid):
-        user_key = "key:" + gid
+        
         new_google_user = GoogleUser(
-            key_name=user_key,
+            id=gid,
             email=em, 
             display_name=dn,
             given_name=gn,
@@ -67,11 +92,15 @@ class GoogleUser(ndb.Expando):
         key = new_google_user.put()
         log("[+] New Google User stored")
         log(key)
+        log(gid)
         return new_google_user, key
 
     @classmethod
     def user_exists(cls, gid):
-        return cls.get_by_id(gid) != None
+        log("checking if google user %s exists" % gid)
+        user = cls.get_by_id(gid) # accesses the userid
+        log((user != None))
+        return user != None
 
 class CustomUser(ndb.Expando):
 
@@ -85,8 +114,7 @@ class CustomUser(ndb.Expando):
     def store_user(cls, username, password, email, social_networks):
         key = "key:" + cls.create_user_key()
         user = cls(
-            key_name=key,
-            userid=key,
+            id=key,
             username=username,
             password=password,
             email=email,
@@ -159,6 +187,7 @@ class CustomLoginHandler(MainHandler):
     def post(self):
         try:
 
+            # The android app will 
             submit_way = self.request.get("login_type")
 
             if submit_way == "signup":
@@ -212,10 +241,12 @@ class GoogleLoginHandler(MainHandler):
             given_name = self.request.get("given_name")
 
             # Respond with a boolean indicating whether or not this is the users first time signing in, true if so
-            if GoogleUser.user_exists(google_id):
+            log_args([google_id, display_name, email, family_name, given_name])
+            sanitized_google_id = "key:" + google_id
+            if GoogleUser.user_exists(sanitized_google_id):
                 self.write("true") 
             else:
-                user, key = GoogleUser.store_user(email, display_name, given_name, family_name, google_id)
+                user, key = GoogleUser.store_user(email, display_name, given_name, family_name, sanitized_google_id)
                 self.write("false")
             
         except Exception as e:

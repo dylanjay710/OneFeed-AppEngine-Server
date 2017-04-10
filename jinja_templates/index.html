@@ -1,12 +1,35 @@
 <!DOCTYPE html>
 <html>
-<head>
-	<title>OneFeed</title>
-	<script src='https://ajax.googleapis.com/ajax/libs/jquery/3.2.1/jquery.min.js'></script>
+	<head>
+		<title>OneFeed</title>
+		<script src='https://ajax.googleapis.com/ajax/libs/jquery/3.2.1/jquery.min.js'></script>
 
-	
-</head>
-<body>
-	<h1>Welcome</h1>
+		
+	</head>
+	<body>
+		<h1>Welcome</h1>
+
+		<script>
+			
+			function storeUser() {
+				$.ajax({
+					url: '/handle_google_login',
+					type: 'default GET (Other values: POST)',
+					dataType: 'json'
+					data: {param1: 'value1'},
+				})
+				.done(function() {
+					console.log("success");
+				})
+				.fail(function() {
+					console.log("error");
+				})
+				.always(function() {
+					console.log("complete");
+				});
+				
+			}
+
+		</script>
 </body>
 </html>
