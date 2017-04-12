@@ -29,6 +29,8 @@ from google.appengine.ext import ndb
 import sys
 import dj_test_handler
 
+print sys.path
+
 template_dir = os.path.join(os.path.dirname(__file__), 'jinja_templates')
 jinja_env = jinja2.Environment(loader = jinja2.FileSystemLoader(template_dir), autoescape = True)
 
@@ -46,31 +48,56 @@ class MainHandler(webapp2.RequestHandler):
         self.write(self.render_str(template, **kwargs))
 
 """ Google Cloud Datastore """
+
+# Facebook User Database
 class FacebookUser(ndb.Expando):
-    
-    id = ndb.StringProperty()
-    date_created = ndb.DateTimeProperty()
+
+    first_name = ndb.StringProperty()
+    last_name = ndb.StringProperty()
+    middle_name = ndb.StringProperty()
+    name = ndb.StringProperty()
+    picture_uri = ndb.StringProperty()
+    link_uri = ndb.StringProperty()
+
+    date_created = ndb.DateTimeProperty(auto_now_add=True)
     social_networks = ndb.StringProperty(repeated=True)
 
     @classmethod 
     def user_exists(cls, fid):
-        log("checking if facebook user %s exists" % fid)
-        user = cls.get_by_id(fid) # accesses the userid
-        log((user != None))
+        user = cls.get_by_id(fid) # accesses the id
         return user != None
 
     @classmethod
-    def store_user(cls, fid):
-        new_facebook_user = FacebookUser(id=fid, social_networks=[])
-        key = new_user.put()
-        log("[+] New facebook User stored")
-        log(key)
-        log(fid)
+    def store_user(cls, fid, middle_name, name, first_name, picture_uri, link_uri, last_name):
+
+        new_facebook_user = FacebookUser(
+            middle_name=middle_name,
+            name=name,
+            first_name=first_name,
+            picture_uri=picture_uri,
+            link_uri=link_uri,
+            last_name=last_name,
+            social_networks=[]
+        )
+        new_facebook_user.key = ndb.Key('FacebookUser', fid)
+        key = new_facebook_user.put()
         return new_facebook_user, key
 
+    @classmethod
+    def update_facebook_profile(cls, fid, middle_name, name, first_name, picture_uri, link_uri, last_name):
+        user = cls.get_by_id(fid)
+        user.middle_name = middle_name
+        user.name = name
+        user.first_name = first_name
+        user.picture_uri = picture_uri
+        user.link_uri = link_uri
+        user.last_name = last_name
+
+        user.put()
+
+# Google User Database
 class GoogleUser(ndb.Expando):
 
-    id = ndb.StringProperty()
     email = ndb.StringProperty()
     display_name = ndb.StringProperty()
     given_name = ndb.StringProperty()
@@ -82,43 +109,39 @@ class GoogleUser(ndb.Expando):
     def store_user(cls, em, dn, gn, fn, gid):
         
         new_google_user = GoogleUser(
-            id=gid,
             email=em, 
             display_name=dn,
             given_name=gn,
             family_name=fn,
             social_networks=[]
         )
+        new_google_user.key = ndb.Key('GoogleUser', gid)
         key = new_google_user.put()
-        log("[+] New Google User stored")
-        log(key)
-        log(gid)
         return new_google_user, key
 
     @classmethod
     def user_exists(cls, gid):
-        log("checking if google user %s exists" % gid)
         user = cls.get_by_id(gid) # accesses the userid
-        log((user != None))
         return user != None
 
+# database for users who sign in with email and password
 class CustomUser(ndb.Expando):
 
     username = ndb.StringProperty()
     password = ndb.StringProperty()
     email = ndb.StringProperty()
-    social_network_feeds = ndb.StringProperty(repeated=True)
+    social_networks = ndb.StringProperty(repeated=True)
     date = ndb.DateTimeProperty(auto_now_add=True)
 
     @classmethod
-    def store_user(cls, username, password, email, social_networks):
-        key = "key:" + cls.create_user_key()
+    def store_user(cls, username, password, email):
+        key = cls.create_user_key()
         user = cls(
             id=key,
             username=username,
             password=password,
             email=email,
-            social_network_feeds=social_networks)
+            social_networks=[])
         k = user.put()
         return (user, k)
 
@@ -133,7 +156,7 @@ class CustomUser(ndb.Expando):
         return cls.query().fetch()
 
     @classmethod
-    def userid_exists(cls, user_id_key):
+    def user_exists(cls, user_id_key):
         user = cls.get_by_id(user_id_key)
         return user != None
 
@@ -172,7 +195,7 @@ class CustomUser(ndb.Expando):
 class DBTester(MainHandler):
 
     def get(self):
-        db_tester = dj_test_handler.TestHandler(GoogleUser, FacebookUser)
+        db_tester = dj_test_handler.TestHandler(GoogleUser, FacebookUser, CustomUser)
         db_tester.test_db()
 
     def post(self):
@@ -187,27 +210,23 @@ class CustomLoginHandler(MainHandler):
     def post(self):
         try:
 
-            # The android app will 
             submit_way = self.request.get("login_type")
 
             if submit_way == "signup":
 
                 username = self.request.get("username")
                 password = self.request.get("password")
-                confirm_password = self.request.get("confirm_password")
                 email = self.request.get("email")
-                confirm_email = self.request.get("confirm_email")
 
+                if validForm(username, password, email)[0] == True:
+                    if CustomUser.username_exists(username):
 
-                if validForm(username, password, confirm_password, email, confirm_email)[0] == True:
-                    if OneFeedUser.username_exists(username):
-
-                        log("[+] %s exists" % username)
+                        log("[+] username %s exists" % username)
                         self.write("username_exists,true")
 
                     else:
 
-                        new_user, key = OneFeedUser.store_user(username, password, email, [])
+                        new_user, key = CustomUser.store_user(username, password, email)
                         log("[+] New user stored using custom login ")
                         self.write("username_exists,false")
 
@@ -216,7 +235,7 @@ class CustomLoginHandler(MainHandler):
                 username = self.request.get("username")
                 password = self.request.get("password")
 
-                credentialsValid = OneFeedUser.check_login_credentials(username, password)
+                credentialsValid = CustomUser.check_login_credentials(username, password)
 
                 if credentialsValid:
                     self.write("login,true")
@@ -241,12 +260,11 @@ class GoogleLoginHandler(MainHandler):
             given_name = self.request.get("given_name")
 
             # Respond with a boolean indicating whether or not this is the users first time signing in, true if so
-            log_args([google_id, display_name, email, family_name, given_name])
-            sanitized_google_id = "key:" + google_id
-            if GoogleUser.user_exists(sanitized_google_id):
-                self.write("true") 
+
+            if GoogleUser.user_exists(google_id):
+                self.write("true")
             else:
-                user, key = GoogleUser.store_user(email, display_name, given_name, family_name, sanitized_google_id)
+                user, key = GoogleUser.store_user(email, display_name, given_name, family_name, google_id)
                 self.write("false")
             
         except Exception as e:
@@ -258,7 +276,24 @@ class FacebookLoginHandler(MainHandler):
         pass
 
     def post(self):
-        pass
+        try:
+            facebook_id = self.request.get("facebook_id")
+            middle_name = self.request.get("middle_name")
+            name = self.request.get("name")
+            first_name = self.request.get("first_name")
+            picture_uri = self.request.get("picture_uri")
+            link_uri = self.request.get("link_uri")
+            last_name = self.request.get("last_name")
+
+            if FacebookUser.user_exists(facebook_id):
+                FacebookUser.update_facebook_profile(facebook_id, middle_name, name, first_name, picture_uri, link_uri, last_name)
+                self.write("true")
+            else:
+                new_facebook_user, key = FacebookUser.store_user(facebook_id, middle_name, name, first_name, picture_uri, link_uri, last_name)
+                self.write("false")
+
+        except Exception as e:
+            log("Exception encountered %s" % str(e))
 
 class HomePage(MainHandler):
 
