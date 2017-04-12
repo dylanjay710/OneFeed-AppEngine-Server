@@ -21,13 +21,13 @@ class TestHandler(object):
 
 		for user in google_users:
 
-			logging.info(check_value("key_name", user))
-			logging.info(check_value("id", user))
-			logging.info(check_value("display_name", user))
-			logging.info(check_value("family_name", user))
-			logging.info(check_value("given_name", user))
-			logging.info(check_value("email", user))
-			logging.info(check_value("social_networks", user))
+			log(user.key)
+			log(user.key.get())
+			log("[+] Display Name: %s" % user.display_name)
+			log("[+] Family Name: %s" % user.family_name)
+			log("[+] Given Name: %s" % user.given_name)
+			log("[+] Email: %s" % user.email)
+			log("[+] Social Networks; %s" % user.social_networks)
 
 	def show_facebook_users(self):
 		
@@ -36,26 +36,22 @@ class TestHandler(object):
 		logging.info("[+] Number of facebook users in OneFeed datastore: " + str(len(facebook_users)))
 	
 		for user in facebook_users:
-			logging.info(check_value("key_name", user))
-			logging.info(check_value("id", user))
-			logging.info(check_value("middle_name", user))
-			logging.info(check_value("name", user))
-			logging.info(check_value("first_name", user))
-			logging.info(check_value("picture_uri", user))
-			logging.info(check_value("link_uri", user))
-			logging.info(check_value("last_name", user))
-			logging.info(check_value("social_networks", user))
+
+			log(user.key)
+
+			log(user.key.get())
+			log("[+] First Name: %s" % user.first_name)
+			log("[+] Middle Name: %s" % user.middle_name)
+			log("[+] Last Name: %s" % user.last_name)
+			log("[+] Name: %s" % user.name)
+			log("[+] Picture Uri: %s" % user.picture_uri)
+			log("[+] Link Uri: %s " % user.link_uri)
+			log("[+] Social Networks: %s" % user.social_networks)
 
 	def show_custom_users(self):
 		logging.info("[+] Getting Custom users from db")
 		custom_users = self.custom_userdb.query().fetch()
 		logging.info("[+] Number of Custom users in OneFeed datastore: " + str(len(custom_users)))
-
-def check_value(param, user):
-	if param in user._properties:
-		return user[param]
-	else:
-		return "User has no property %s" % param
 
 def log(msg):
 	logging.info(msg)
